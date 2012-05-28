@@ -1,0 +1,6 @@
+[submodule "app/lib/node-static"]
+	path = app/lib/node-static
+	url = git://github.com/KgDesignes/node-static.git
+[submodule "app/lib/openmultimedia.node-library"]
+	path = app/lib/openmultimedia.node-library
+	url = git@github.com:OpenMultimedia/node-library.git

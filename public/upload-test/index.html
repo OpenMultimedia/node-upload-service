@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+    "http://www.w3.org/TR/html4/strict.dtd"
+    >
+<html lang="en">
+<head>
+    <title>Upload Service Test</title>
+    <link rel="stylesheet" type="text/css" href="css/fileuploader.css" />
+    <script type="text/javascript" src="js/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="js/fileuploader.js"></script>
+    <script type="text/javascript" src="js/ajaxfileupload.js"></script>
+    <script type="text/javascript" src="js/jquery.json-2.3.min.js"></script>
+    <script type="text/javascript">
+    $(document).ready(function () {
+        $('#upload_form').on('submit.test', function() {
+            $.ajaxFileUpload({
+                url: $('#upload_form').attr('action'),
+                secureuri: false,
+                fileElementId:'upload_file',
+                dataType: 'text',
+                success: function (data, status) {
+                    $('#upload_result').html('<pre>' + data + '</pre>');
+                },
+                error: function (data, status, e)
+                {
+                    $('#upload_result').html('<pre>' + data + '</pre>');
+                }
+            });
+            return false;
+        });
+
+        var uploader = new qq.FileUploader({
+            element: $('#upload_form2')[0],
+            action: $('#upload_form').attr('action'),
+            debug: true,
+            onComplete: function(id, filename, result) {
+                $('#upload_result2').html('<pre>' + $.toJSON(result) + '</pre>');
+            }
+        });
+
+        $('#download_form').on('submit.test', function() {
+            $('#download_frame').attr('src', $('#download_form').attr('action') + $(this).find('input[name=archivo]').val() );
+            return false;
+        });
+
+        $('#delete_form').on('submit.test', function() {
+            $.ajax({
+                url: $('#delete_form').attr('action') + $('#delete_form').find('input[name=archivo]').val(),
+                type: 'DELETE',
+                dataType: 'text',
+                success: function (data, status) {
+                    $('#delete_result').html('<pre>' + data + '</pre>');
+                },
+                error: function (data, status, e)
+                {
+                    $('#delete_result').html('<pre>' + data.responseText + '</pre>');
+                }
+            });
+            return false;
+        });
+    });
+    </script>
+</head>
+<body>
+    <h3>Traditional Upload</h3>
+    <form id="upload_form" name="upload_form" action="../files/" method="POST" enctype="multipart/form-data">
+        <input id="upload_file" name="archivo" type="file"/>
+        <br />
+        <input name="boton_enviar" type="submit" value="Enviar" />
+    </form>
+    <div id="upload_result" style="width: 100%; height: 50px; border: 1px solid red;"></div>
+
+    <hr />
+
+    <h3>Upload with Progress</h3>
+    <div id="upload_form2"></div>
+    <div id="upload_result2" style="width: 100%; height: 50px; border: 1px solid red;"></div>
+    <hr />
+
+    <h3>Download</h3>
+    <form id="download_form" name="download_form" action="../files/" method="GET">
+        <input name="archivo" type="text"/>
+        <br />
+        <input name="boton_enviar" type="submit" value="Enviar" />
+    </form>
+    <iframe id="download_frame" style="width: 100%; height: 50px; border: 1px solid red;" frameborder="0"></iframe>
+
+    <hr />
+
+    <h3>Delete</h3>
+    <form id="delete_form" name="delete_form" action="../files/" method="DELETE">
+        <input name="archivo" type="text"/>
+        <br />
+        <input name="boton_enviar" type="submit" value="Enviar" />
+    </form>
+    <div id="delete_result" style="width: 100%; height: 50px; border: 1px solid red;"></div>
+</body>
+</html>
