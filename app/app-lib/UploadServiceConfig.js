@@ -1,4 +1,4 @@
-var OMLoader = require('./openmultimedia.node-library/OMLoader.js');
+var OMLoader = require('../lib/openmultimedia.node-library/OMLoader.js');
 
 var Inheritance = OMLoader.require('base/Inheritance.js');
 var AbstractConfig = OMLoader.require('base/AbstractConfig.js');

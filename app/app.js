@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Cambio al directorio actual del script
-process.chdir(__dirname );
+process.chdir(__dirname);
 
 /** @type {HTTP} */
 var http = require('http');
@@ -16,14 +16,14 @@ var url = require('url');
 
 var OMLoader =  require('./lib/openmultimedia.node-library/OMLoader.js');
 
-var UploadServiceConfig = require('./app/UploadServiceConfig.js');
+var UploadServiceConfig = require('./app-lib/UploadServiceConfig.js');
 
 var config = new UploadServiceConfig();
 
 var node_static = require('./lib/node-static');
 
-if ( path.existsSync('config.json') ) {
-    var configFile = fs.readFileSync('config.json');
+if ( path.existsSync('app-config.json') ) {
+    var configFile = fs.readFileSync('app-config.json');
     if ( configFile ) {
         config.setOptions(JSON.parse(configFile));
     }
