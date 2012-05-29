@@ -1,26 +1,28 @@
 #!/usr/bin/env node
 
+var nodetime = require('../../../public/nodetime/');
+nodetime.profile();
+
+/** @type {http} */
+var http = require('http');
+
+/** @type {path} */
+var path = require('path');
+
+/** @type {fs} */
+var fs = require('fs');
+
 // Cambio al directorio actual del script
 process.chdir(__dirname);
 
-/** @type {HTTP} */
-var http = require('http');
+// Inicialización del Loader Global de la biblioteca de componentes OpenMultimedia
+global.OMLoader = require('./lib/openmultimedia.node-library/OMLoader.js');
 
-var path = require('path');
-
-var fs = require('fs');
-
-var mongodb = require('mongodb');
-
-var url = require('url');
-
-var OMLoader =  require('./lib/openmultimedia.node-library/OMLoader.js');
+// Inicialización de la configuración del Servicio de Uploads
 
 var UploadServiceConfig = require('./app-lib/UploadServiceConfig.js');
 
 var config = new UploadServiceConfig();
-
-var node_static = require('./lib/node-static');
 
 if ( path.existsSync('app-config.json') ) {
     var configFile = fs.readFileSync('app-config.json');
@@ -29,7 +31,23 @@ if ( path.existsSync('app-config.json') ) {
     }
 }
 
+// Inicialización del Servidor de contenido estático
+
+var node_static = require('./lib/node-static');
+
 var staticServer = new node_static.Server('../public/');
+
+// Inicialización del Manejador del API
+
+var ApiManager = require('./app-lib/api/ApiManager.js');
+
+var apiManager = new ApiManager(config.api);
+
+apiManager.addListener('invalid_api_endpoint',
+    function onApiControllerNotFound ( request, response ) {
+        staticServer.serve(request, response);
+    }
+);
 
 /** @type {http.Server} */
 var server = http.createServer(
@@ -39,79 +57,13 @@ var server = http.createServer(
      * @param {http.ServerResponse} response
      */
     function(request, response) {
-        console.log('Connection received.');
+        console.log('Processing request');
 
-        var currentUrl = url.parse(request.url, true);
-
-        if ( currentUrl.pathname == '/files/' ) {
-
-            switch ( request.method ) {
-                case 'GET':
-                    response.write('Dawnload!!');
-                    break;
-
-                case 'PUT':
-                case 'POST':
-                    response.write('Uploaddd!!');
-                    break;
-
-                case 'DELETE':
-                    response.write('Deleteee!!');
-                    break;
-
-                default:
-                    response.write('???');
-            }
-
-            response.end();
-        } else {
-            //bouncy.bounce(88, 'static-upload.openmultimedia.dev');
-            staticServer.serve(request, response);
-        }
-
-        return;
-
-        response.writeHead(200, {'Content-Type': 'text/html'});
-
-        console.log("Processing file");
-
-        //new mongo.Db('upload_service');
-
-        var outputBuffer = fs.createWriteStream('temp', { flags: 'w', encoding: null, mode: ( 0x10 * 0x6 + 0x8 * 0x6 + 0x6 ) });
-
-        var peakMem = 0;
-
-        request.pipe(outputBuffer);
-
-        request.addListener('data',
-            /**
-             * @param {Buffer} dataBuffer;
-             */
-            function(dataBuffer) {
-                //outputBuffer.write(dataBuffer);
-
-                var theMem = process.memoryUsage().rss;
-
-                console.log("Memory: MB", theMem / (1024 * 1024));
-
-                if ( theMem > peakMem ) {
-                    peakMem = theMem;
-                }
-            }
-        );
-
-        request.addListener('end', function() {
-            outputBuffer.end();
-            console.log('Peak mem: ', peakMem / (1024 * 1024));
-            response.end();
-        });
-
-        response.write('<html><body>Hio telesur</body></html>');
+        apiManager.manageRequest( request, response );
     }
 );
 
 var serverPort = config.get('server').get('port');
-
 var serverAddress = config.get('server').get('address');
 
 server.listen(serverPort, serverAddress);
