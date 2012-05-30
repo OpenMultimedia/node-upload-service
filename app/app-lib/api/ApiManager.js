@@ -4,13 +4,11 @@ var FilesApiController = require('./files/FilesApiController.js');
 
 var AuthApiController = require('./auth/AuthApiController.js');
 
-var Inheritance = global.OMLoader.require('base/Inheritance.js');
-
 var events = require('events');
+var util = require('util');
 
 function ApiManager (opt_config) {
-
-    if ( opt_config && Inheritance.instanceof(opt_config, ApiManagerConfig) ) {
+    if ( opt_config && ( opt_config instanceof ApiManagerConfig ) ) {
         this.config_ = opt_config;
     } else {
         this.config_ = new ApiManagerConfig(opt_config);
@@ -25,9 +23,11 @@ function ApiManager (opt_config) {
             controller: new AuthApiController( this.config_.get('auth') )
         }
     ];
+
+    ApiManager.super_.apply(this);
 };
 
-Inheritance.forceInherits(ApiManager, events.EventEmitter);
+util.inherits(ApiManager, events.EventEmitter);
 
 ApiManager.prototype.manageRequest = function ApiManager_manageRequest (request, response) {
     var url = require('url').parse(request.url, true);

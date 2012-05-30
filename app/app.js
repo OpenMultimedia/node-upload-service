@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 
-var nodetime = require('../../../public/nodetime/');
-nodetime.profile();
+for ( var i = 2; i < process.argv.length; i += 1 ) {
+    if ( process.argv[i] == '--profile' ) {
+        var nodetime = require('../../../public/nodetime/');
+        nodetime.profile();
+        break;
+    }
+}
 
 /** @type {http} */
 var http = require('http');
@@ -41,7 +46,7 @@ var staticServer = new node_static.Server('../public/');
 
 var ApiManager = require('./app-lib/api/ApiManager.js');
 
-var apiManager = new ApiManager(config.api);
+var apiManager = new ApiManager(config.get('api'));
 
 apiManager.addListener('invalid_api_endpoint',
     function onApiControllerNotFound ( request, response ) {
