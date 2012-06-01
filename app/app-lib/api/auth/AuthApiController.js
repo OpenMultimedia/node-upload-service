@@ -1,15 +1,20 @@
-var OMLoader = global.OMLoader;
+var OMLib = global.OMLib;
+var oop = OMLib.require('oop');
 
-var Inheritance = OMLoader.require('base/Inheritance.js');
+var AbstractApiController = OMLib.require('api/AbstractApiController.js');
 
 var AuthApiConfig = require('./AuthApiConfig.js');
 
-var AbstractApiController = require('../AbstractApiController.js');
-
 function AuthApiController(opt_config) {
+    if ( opt_config instanceof AuthApiConfig ) {
+        this.config_ = opt_config;
+    } else {
+        this.config_ = new AuthApiConfig(opt_config);
+    }
 
+    oop.super(AuthApiController).constructor.apply(this);
 }
 
-Inheritance.inherits(AuthApiController, AbstractApiController);
-
 module.exports = AuthApiController;
+
+oop.inherits(AuthApiController, AbstractApiController);

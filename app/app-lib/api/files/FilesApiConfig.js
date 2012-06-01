@@ -1,20 +1,21 @@
-var OMLoader = global.OMLoader;
+var OMLib = global.OMLib;
+var oop = OMLib.require('oop');
 
-var Inheritance = OMLoader.require('base/Inheritance.js');
-var MongoDBConfig = OMLoader.require('db/MongoDBConfig.js');
-var AbstractConfig = OMLoader.require('base/AbstractConfig.js');
-var FilesizeUnit = OMLoader.require('base/FilesizeUnit.js');
-var util = require('util');
+var MongoDBConfig = OMLib.require('db/MongoDBConfig.js');
+var AbstractConfig = OMLib.require('AbstractConfig.js');
+var FilesizeUnit = OMLib.require('util/FilesizeUnit.js');
 
 function FilesApiConfig(opt_options) {
-    FilesApiConfig.super_.apply(this, [ opt_options ]);
+    oop.super(FilesApiConfig).constructor.apply(this, [ opt_options ]);
 }
 
-util.inherits(FilesApiConfig, AbstractConfig);
+module.exports = FilesApiConfig;
+
+oop.inherits(FilesApiConfig, AbstractConfig);
 
 FilesApiConfig.prototype.initializeFields = function FilesApiConfig_initializeFields() {
 
-    FilesApiConfig.super_.prototype.initializeFields.apply(this);
+    oop.super(FilesApiConfig).initializeFields.apply(this);
 
     this.fields_['db'] = new MongoDBConfig();
 
@@ -26,13 +27,3 @@ FilesApiConfig.prototype.initializeFields = function FilesApiConfig_initializeFi
 
     this.fields_['valid_formats'] = [ 'mp4', 'avi', 'mov' ]
 };
-
-FilesApiConfig.prototype.setOptions = function (opt_options) {
-
-    console.log('Setting %j', opt_options);
-
-    FilesApiConfig.super_.prototype.setOptions.apply(this, [opt_options]);
-
-}
-
-module.exports = FilesApiConfig;

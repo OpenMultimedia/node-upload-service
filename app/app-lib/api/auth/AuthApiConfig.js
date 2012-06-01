@@ -1,21 +1,19 @@
-var OMLoader = global.OMLoader;
+var OMLib = global.OMLib;
+var oop = OMLib.require('oop');
 
-var Inheritance = OMLoader.require('base/Inheritance.js');
-
-var MongoDBConfig = OMLoader.require('db/MongoDBConfig.js');
-
-var AbstractConfig = OMLoader.require('base/AbstractConfig.js');
+var MongoDBConfig = OMLib.require('db/MongoDBConfig.js');
+var AbstractConfig = OMLib.require('AbstractConfig.js');
 
 function AuthApiConfig(opt_options) {
-    Inheritance.parentConstructorApply(this, AuthApiConfig, [ opt_options ]);
+    oop.super(AuthApiConfig).constructor.apply(this, [ opt_options ]);
 }
 
-Inheritance.inherits( AuthApiConfig, AbstractConfig );
+module.exports = AuthApiConfig;
+
+oop.inherits( AuthApiConfig, AbstractConfig );
 
 AuthApiConfig.prototype.initializeFields = function AuthApiConfig_initializeFields() {
-    Inheritance.parentMethodApply(this, AuthApiConfig,  'initializeFields');
+    oop.super(AuthApiConfig).initializeFields.apply(this);
 
     this.fields_['db'] = new MongoDBConfig();
 };
-
-module.exports = AuthApiConfig;

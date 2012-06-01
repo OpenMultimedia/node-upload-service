@@ -1,16 +1,26 @@
-var OMLoader = global.OMLoader;
-
-var Inheritance = OMLoader.require('base/Inheritance.js');
-
-var FilesApiConfig = require('./FilesApiConfig.js');
-
-var AbstractApiController = require('../AbstractApiController.js');
+var OMLib = global.OMLib;
+var oop = OMLib.require('oop');
+var apiutil = OMLib.require('api/util')
 
 var path = require('path');
 var fs = require('fs');
 var formidable = require('formidable');
 var crypto = require('crypto');
-var util = require('util');
+
+var AbstractApiController = OMLib.require('api/AbstractApiController.js');
+var FilesApiConfig = require('./FilesApiConfig.js');
+
+var StatusCode = {
+    Success: 'success'
+}
+var ErrorCode = {
+    InvalidRequest: 'invalid_request',
+    FileNotExists: 'file_not_exists',
+    ServerError: 'server_error',
+    SizeLimitExceeded: 'size_limit_exceeded',
+    FileExists: 'file_exists',
+    FileEmpty: 'file_empty'
+}
 
 function FilesApiController (opt_config) {
     if ( opt_config && (opt_config instanceof FilesApiConfig) ) {
@@ -21,10 +31,12 @@ function FilesApiController (opt_config) {
 
     this.fileIdCont_ = 0;
 
-    FilesApiController.super_.apply(this);
+    oop.super(FilesApiController).constructor.apply(this);
 }
 
-util.inherits(FilesApiController, AbstractApiController);
+module.exports = FilesApiController;
+
+oop.inherits(FilesApiController, AbstractApiController);
 
 FilesApiController.prototype.makeFileId = function FilesApiController_makeFileId () {
     if ( this.fileIdCont_ >= 100 ) {
@@ -48,57 +60,110 @@ FilesApiController.prototype.serve = function FilesApiController_serve (path, pa
             break;
         default:
             console.log('Invalid Method: %s', request.method);
-            this.serveError( 503, 'invalid_request', request, response );
+            this.serveError( 503, ErrorCode.InvalidRequest, request, response );
             break;
     }
 };
 
 FilesApiController.prototype.serveGet = function FilesApiController_serveGet ( path, params, request, response ) {
-    console.log("Serving GEt");
-    var pathPieces = this.splitPath(path);
+    var pathInfo = apiutil.splitResourcePath(path);
 
-    if ( pathPieces.length == 1 ) {
+    console.log("Serving GET for %j", pathInfo);
+
+    if ( pathInfo.parts.length == 1 ) {
         // Serve: GET /<file-id>/
-        this.serveFileDownload( pathPieces[0] );
-    } else if ( (pathPieces.length == 2) && (pathPieces[1] == 'info') ) {
+        console.log("Serving File Download");
+        this.serveFileDownload( pathInfo.parts[0], params, request, response );
+    } else if ( (pathInfo.parts.length == 2) && (pathInfo.parts[1] == 'info') ) {
         // Serve: GET /<file-id>/info/
-        this.serveFileInfo( pathPieces[0] );
+        console.log("Serving File Info");
+        this.serveFileInfo( pathInfo.parts[0], params, request, response );
     } else {
         // Serve anything else
-        this.serveError( 503, 'invalid_request', request, response );
+        console.log("Serving Invalid Request");
+        this.serveError( 503, ErrorCode.InvalidRequest, request, response );
     }
 };
 
 FilesApiController.prototype.servePost = function FilesApiController_servePost ( path, params, request, response  ) {
-    var pathPieces = this.splitPath(path);
+    var pathInfo = apiutil.splitResourcePath(path);
 
-    console.log("Serving post: %j", pathPieces);
-
-    if ( pathPieces.length == 0 ) {
+    if ( pathInfo.parts.length == 0 ) {
         // Upload New File
         this.serveFileUpload( '',  params, request, response );
-    } else if ( pathPieces.length == 1 ) {
+    } else if ( pathInfo.parts.length == 1 ) {
         //TODO: Considerar params['overwrite']
 
         // Overwrite or Resume File Upload
-        this.serveFileUpload( pathPieces[0], params, request, response )
+        this.serveFileUpload( pathInfo.parts[0], params, request, response )
     } else {
         // Request Invalid
-        this.serveError(503, 'invalid_request', request, response);
-        request.connection.destroy();
+        this.serveError(503, ErrorCode.InvalidRequest, request, response);
     }
 };
 
 FilesApiController.prototype.serveDelete = function FilesApiController_serveDelete ( path, params, request, response  ) {
+    var pathInfo = apiutil.splitResourcePath(path);
 
+    console.log("Serving DELETE for %s", path);
+
+    if ( pathInfo.parts.length == 1 ) {
+        // Serve: GET /<file-id>/
+        console.log("Serving File Delete");
+        this.serveFileDelete( pathInfo.parts[0], params, request, response );
+    } else {
+        // Serve anything else
+        console.log("Serving Invalid Request");
+        this.serveError( 503, ErrorCode.InvalidRequest, request, response );
+    }
 };
 
 FilesApiController.prototype.serveFileDownload = function FilesApiController_serveFileDownload ( fileid, params, request, response ) {
+    var self = this;
 
+    var downloadPath = path.join( this.config_.get('upload_location'), fileid );
+
+    path.exists( downloadPath, function(exists) {
+        if ( ! exists ) {
+            self.serveError(404, ErrorCode.FileNotExists, request, response);
+            return;
+        }
+
+        fs.stat( downloadPath, function(err, stat) {
+            if ( err ) {
+                self.serveError(503, ErrorCode.ServerError, request, response);
+                return;
+            }
+
+            if ( ! stat.isFile() ) {
+                self.serveError(404, ErrorCode.FileNotFound, request, response);
+                return;
+            }
+
+            var fileStream = fs.createReadStream(downloadPath);
+
+            response.writeHead(200, {
+                'Content-type': 'application/octet-stream',
+                'Content-Disposition': 'attachment; filename=' + fileid,
+                'Expires': '0',
+                'Cache-Control': 'must-revalidate',
+                'Pragma': 'public',
+                'Content-Length': stat.size
+            });
+
+            fileStream.on('end', function() {
+                response.end();
+                request.connection.end();
+            });
+
+            console.log('Piping download');
+            fileStream.pipe( response );
+        });
+    });
 };
 
 FilesApiController.prototype.serveFileInfo = function FilesApiController_serveFileInfo ( fileid, params, request, response ) {
-
+    this.serveJSON(503, ErrorCode.InvalidRequest, request, response);
 };
 
 FilesApiController.prototype.serveFileUpload = function FilesApiController_serveFileUpload ( fileid, params, request, response ) {
@@ -117,7 +182,7 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
 
     if ( contentLength > this.config_.get('size_limit') ) {
         console.log("Req: %d > SL: %d", contentLength, this.config_.get('size_limit'));
-        this.serveError(503, 'size_limit_exceeded', request, response);
+        this.serveError(503, ErrorCode.SizeLimitExceeded, request, response);
         return;
     }
 
@@ -140,7 +205,7 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
             var canWriteFile = ( ! exists || overwrite );
 
             if ( ! canWriteFile ) {
-                self.serveError(503, 'file_exists', request, response );
+                self.serveError(503, ErrorCode.FileExists, request, response );
                 return;
             } else {
                 if ( exists ) {
@@ -192,7 +257,7 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
 
         form.on('end', function() {
             if ( ! fileReceived ) {
-                self.serveError(503, 'file_empty', request, response);
+                self.serveError(503, ErrorCode.FileEmpty, request, response);
             }
         });
 
@@ -210,28 +275,34 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
     } else {
         // ContentType desconocido
 
-        self.serveError(503, 'invalid_request', request, response);
+        self.serveError(503, ErrorCode.InvalidRequest, request, response);
     }
 };
 
-FilesApiController.prototype.serveError = function FilesApiController_serveError ( httpErrorCode, errorCode, request, response ) {
-    var errorObject = {
-        'success': false,
-        'status': 'error',
-        'error': errorCode
-    };
+FilesApiController.prototype.serveFileDelete = function FilesApiController_serveFileDelete ( fileid, params, request, response ) {
+    var self = this;
+    var deletePath = path.join( this.config_.get('upload_location'), fileid );
 
-    this.serveJSON( httpErrorCode, errorObject, response);
+    path.exists( deletePath, function(exists) {
+        if ( ! exists ) {
+            self.serveError(503, ErrorCode.FileNotExists, request, response);
+            return;
+        }
 
-    request.connection.destroy();
-
-    console.log('Request Error: ' + errorCode);
+        fs.unlink( deletePath, function(err) {
+            if ( err ) {
+                self.serveError(503, ErrorCode.ServerError, request, response);
+            } else {
+                self.serveDeleteSuccess(fileid, request, response);
+            }
+        } );
+    });
 };
 
 FilesApiController.prototype.servePostSuccess = function FilesApiController_servePostSuccess ( fileId, request, response ) {
     var successObject = {
         'success': true,
-        'status': 'success',
+        'status': StatusCode.Success,
         'id': fileId
     };
 
@@ -242,6 +313,30 @@ FilesApiController.prototype.servePostSuccess = function FilesApiController_serv
     console.log('Request Success');
 };
 
+FilesApiController.prototype.serveDeleteSuccess = function FilesApiController_servePostSuccess ( fileId, request, response ) {
+    var successObject = {
+        'success': true,
+        'status': StatusCode.Success,
+        'id': fileId
+    };
 
+    this.serveJSON( 200, successObject, response);
 
-module.exports = FilesApiController;
+    request.connection.destroy();
+
+    console.log('Request Success');
+};
+
+FilesApiController.prototype.serveError = function FilesApiController_serveError ( httpErrorCode, errorCode, request, response ) {
+    var errorObject = {
+        'success': false,
+        'status': StatusCode.Error,
+        'error': errorCode
+    };
+
+    this.serveJSON( httpErrorCode, errorObject, response);
+
+    request.connection.destroy();
+
+    console.log('Request Error: ' + errorCode);
+};

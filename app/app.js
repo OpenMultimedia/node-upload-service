@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 
-for ( var i = 2; i < process.argv.length; i += 1 ) {
-    if ( process.argv[i] == '--profile' ) {
-        var nodetime = require('../../../public/nodetime/');
-        nodetime.profile();
-        break;
-    }
-}
+/********** Pre-initialize process ********/
+
+// Cambio al directorio actual del script
+process.chdir(__dirname);
+
+/********** Libraries ********/
+
+// Inicialización del Loader Global de la biblioteca de componentes OpenMultimedia
+global.OMLib = require('./lib/openmultimedia.node-library');
 
 /** @type {http} */
 var http = require('http');
+
+/** @type {http} */
+var https = require('https');
 
 /** @type {path} */
 var path = require('path');
@@ -17,60 +22,84 @@ var path = require('path');
 /** @type {fs} */
 var fs = require('fs');
 
-// Cambio al directorio actual del script
-process.chdir(__dirname);
+var nodetime = require('../../../public/nodetime/');
 
-// Inicialización del Loader Global de la biblioteca de componentes OpenMultimedia
-global.OMLoader = require('./lib/openmultimedia.node-library/OMLoader.js');
+/********** Classes ********/
 
 // Inicialización de la configuración del Servicio de Uploads
-
 var UploadServiceConfig = require('./app-lib/UploadServiceConfig.js');
 
-var config = new UploadServiceConfig();
-
-if ( path.existsSync('app-config.json') ) {
-    var configFile = fs.readFileSync('app-config.json');
-    if ( configFile ) {
-        config.setOptions(JSON.parse(configFile));
+/******** Initialization process **********/
+for ( var i = 2; i < process.argv.length; i += 1 ) {
+    if ( process.argv[i] == '--profile' ) {
+        nodetime.profile();
+        break;
     }
+}
+
+var uploadServiceConfig = new UploadServiceConfig();
+
+try {
+    if ( path.existsSync('app-config.json') ) {
+        var configFile = fs.readFileSync('app-config.json');
+        if ( configFile ) {
+            uploadServiceConfig.setOptions(JSON.parse(configFile));
+        }
+    }
+} catch (err) {
+    console.error("Error cargando el archivo de configuración del servicio: %s", err);
+    process.exit();
 }
 
 // Inicialización del Servidor de contenido estático
 
 var node_static = require('./lib/node-static');
 
-var staticServer = new node_static.Server('../public/');
+var staticServer;
+
+if ( uploadServiceConfig.get('public_path') ) {
+    staticServer = new node_static.Server( uploadServiceConfig.get('public_path') );
+}
 
 // Inicialización del Manejador del API
 
 var ApiManager = require('./app-lib/api/ApiManager.js');
 
-var apiManager = new ApiManager(config.get('api'));
+var apiManager = new ApiManager(uploadServiceConfig.get('api'));
 
-apiManager.addListener('invalid_api_endpoint',
-    function onApiControllerNotFound ( request, response ) {
-        staticServer.serve(request, response);
-    }
-);
+if ( staticServer ) {
+    apiManager.addListener('invalid_api_endpoint',
+        function onApiControllerNotFound ( request, response ) {
+            staticServer.serve(request, response);
+        }
+    );
+}
 
-/** @type {http.Server} */
-var server = http.createServer(
-    /**
-     * Procesa la subida
-     * @param {http.ServerRequest} request
-     * @param {http.ServerResponse} response
-     */
-    function(request, response) {
-        console.log('Processing request');
+function ManageRequestWrapper (request,  response) {
+    apiManager.manageRequest(request, response);
+};
 
-        apiManager.manageRequest( request, response );
-    }
-);
+/** @type {http.Server|https.Server} */
+var server;
 
-var serverPort = config.get('server').get('port');
-var serverAddress = config.get('server').get('address');
+var serverConfig = uploadServiceConfig.get('server');
+
+if ( serverConfig.get('ssl') ) {
+    var sslOptions = {
+        key: fs.readFileSync(serverConfig.get('key')),
+        cert: fs.readFileSync(serverConfig.get('cert'))
+    };
+
+    server = https.createServer( sslOptions, ManageRequestWrapper );
+
+} else {
+
+    server = http.createServer( ManageRequestWrapper );
+}
+
+var serverPort = serverConfig.get('port');
+var serverAddress = serverConfig.get('address');
 
 server.listen(serverPort, serverAddress);
 
-console.log('Running Node Server on ' + serverAddress + ':' + serverPort );
+console.log('Running Node Server on %s:%s (SSL %s) ', serverAddress, serverPort, serverConfig.get('ssl') ? 'Activado' : 'Desactivado' );
