@@ -1,119 +1,105 @@
 #!/usr/bin/env node
 
+/********** Pre-initialize process ********/
+
 // Cambio al directorio actual del script
 process.chdir(__dirname);
 
-/** @type {HTTP} */
+/********** Libraries ********/
+
+// Inicialización del Loader Global de la biblioteca de componentes OpenMultimedia
+global.OMLib = require('./lib/openmultimedia.node-library');
+
+/** @type {http} */
 var http = require('http');
 
+/** @type {http} */
+var https = require('https');
+
+/** @type {path} */
 var path = require('path');
 
+/** @type {fs} */
 var fs = require('fs');
 
-var mongodb = require('mongodb');
+var nodetime = require('../../../public/nodetime/');
 
-var url = require('url');
+/********** Classes ********/
 
-var OMLoader =  require('./lib/openmultimedia.node-library/OMLoader.js');
-
+// Inicialización de la configuración del Servicio de Uploads
 var UploadServiceConfig = require('./app-lib/UploadServiceConfig.js');
 
-var config = new UploadServiceConfig();
-
-var node_static = require('./lib/node-static');
-
-if ( path.existsSync('app-config.json') ) {
-    var configFile = fs.readFileSync('app-config.json');
-    if ( configFile ) {
-        config.setOptions(JSON.parse(configFile));
+/******** Initialization process **********/
+for ( var i = 2; i < process.argv.length; i += 1 ) {
+    if ( process.argv[i] == '--profile' ) {
+        nodetime.profile();
+        break;
     }
 }
 
-var staticServer = new node_static.Server('../public/');
+var uploadServiceConfig = new UploadServiceConfig();
 
-/** @type {http.Server} */
-var server = http.createServer(
-    /**
-     * Procesa la subida
-     * @param {http.ServerRequest} request
-     * @param {http.ServerResponse} response
-     */
-    function(request, response) {
-        console.log('Connection received.');
+try {
+    if ( path.existsSync('app-config.json') ) {
+        var configFile = fs.readFileSync('app-config.json');
+        if ( configFile ) {
+            uploadServiceConfig.setOptions(JSON.parse(configFile));
+        }
+    }
+} catch (err) {
+    console.error("Error cargando el archivo de configuración del servicio: %s", err);
+    process.exit();
+}
 
-        var currentUrl = url.parse(request.url, true);
+// Inicialización del Servidor de contenido estático
 
-        if ( currentUrl.pathname == '/files/' ) {
+var node_static = require('./lib/node-static');
 
-            switch ( request.method ) {
-                case 'GET':
-                    response.write('Dawnload!!');
-                    break;
+var staticServer;
 
-                case 'PUT':
-                case 'POST':
-                    response.write('Uploaddd!!');
-                    break;
+if ( uploadServiceConfig.get('public_path') ) {
+    staticServer = new node_static.Server( uploadServiceConfig.get('public_path') );
+}
 
-                case 'DELETE':
-                    response.write('Deleteee!!');
-                    break;
+// Inicialización del Manejador del API
 
-                default:
-                    response.write('???');
-            }
+var ApiManager = require('./app-lib/api/ApiManager.js');
 
-            response.end();
-        } else {
-            //bouncy.bounce(88, 'static-upload.openmultimedia.dev');
+var apiManager = new ApiManager(uploadServiceConfig.get('api'));
+
+if ( staticServer ) {
+    apiManager.addListener('invalid_api_endpoint',
+        function onApiControllerNotFound ( request, response ) {
             staticServer.serve(request, response);
         }
+    );
+}
 
-        return;
+function ManageRequestWrapper (request,  response) {
+    apiManager.manageRequest(request, response);
+};
 
-        response.writeHead(200, {'Content-Type': 'text/html'});
+/** @type {http.Server|https.Server} */
+var server;
 
-        console.log("Processing file");
+var serverConfig = uploadServiceConfig.get('server');
 
-        //new mongo.Db('upload_service');
+if ( serverConfig.get('ssl') ) {
+    var sslOptions = {
+        key: fs.readFileSync(serverConfig.get('key')),
+        cert: fs.readFileSync(serverConfig.get('cert'))
+    };
 
-        var outputBuffer = fs.createWriteStream('temp', { flags: 'w', encoding: null, mode: ( 0x10 * 0x6 + 0x8 * 0x6 + 0x6 ) });
+    server = https.createServer( sslOptions, ManageRequestWrapper );
 
-        var peakMem = 0;
+} else {
 
-        request.pipe(outputBuffer);
+    server = http.createServer( ManageRequestWrapper );
+}
 
-        request.addListener('data',
-            /**
-             * @param {Buffer} dataBuffer;
-             */
-            function(dataBuffer) {
-                //outputBuffer.write(dataBuffer);
-
-                var theMem = process.memoryUsage().rss;
-
-                console.log("Memory: MB", theMem / (1024 * 1024));
-
-                if ( theMem > peakMem ) {
-                    peakMem = theMem;
-                }
-            }
-        );
-
-        request.addListener('end', function() {
-            outputBuffer.end();
-            console.log('Peak mem: ', peakMem / (1024 * 1024));
-            response.end();
-        });
-
-        response.write('<html><body>Hio telesur</body></html>');
-    }
-);
-
-var serverPort = config.get('server').get('port');
-
-var serverAddress = config.get('server').get('address');
+var serverPort = serverConfig.get('port');
+var serverAddress = serverConfig.get('address');
 
 server.listen(serverPort, serverAddress);
 
-console.log('Running Node Server on ' + serverAddress + ':' + serverPort );
+console.log('Running Node Server on %s:%s (SSL %s) ', serverAddress, serverPort, serverConfig.get('ssl') ? 'Activado' : 'Desactivado' );

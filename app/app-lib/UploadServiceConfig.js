@@ -1,32 +1,23 @@
-var OMLoader = require('../lib/openmultimedia.node-library/OMLoader.js');
+var OMLib = global.OMLib;
+var util = require('util');
 
-var Inheritance = OMLoader.require('base/Inheritance.js');
-var AbstractConfig = OMLoader.require('base/AbstractConfig.js');
+var AbstractConfig = OMLib.require('AbstractConfig.js');
 
-var ServerConfig = OMLoader.require('server/ServerConfig.js');
-var MongoDBConfig = OMLoader.require('db/MongoDBConfig.js');
-var UploaderConfig = OMLoader.require('uploader/UploaderConfig.js');
+var ServerConfig = OMLib.require('server/ServerConfig.js');
+var ApiManagerConfig = require('./api/ApiManagerConfig.js');
 
 function UploadServiceConfig(opt_options) {
-    console.log('Running: UploadService');
-
-    Inheritance.parentConstructorApply(this, UploadServiceConfig, [ opt_options ]);
+    UploadServiceConfig.super_.apply(this, [ opt_options ]);
 }
 
-Inheritance.inherits(UploadServiceConfig, AbstractConfig);
+util.inherits(UploadServiceConfig, AbstractConfig);
 
 UploadServiceConfig.prototype.initializeFields = function UploadServiceConfig_initializeFields() {
-    console.log('Running: UploadServiceConfig_initializeFields');
-
-    Inheritance.parentMethodApply(this, UploadServiceConfig, 'initializeFields');
+    UploadServiceConfig.super_.prototype.initializeFields.apply(this);
 
     this.fields_['server'] = new ServerConfig();
-
-    this.fields_['uploader'] = new UploaderConfig();
-
-    this.fields_['db'] = new MongoDBConfig();
-
-    console.log( "UploaderServiceFields");
+    this.fields_['api'] = new ApiManagerConfig();
+    this.fields_['public_path'] = '../public';
 };
 
 module.exports = UploadServiceConfig;
