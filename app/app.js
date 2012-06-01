@@ -22,8 +22,6 @@ var path = require('path');
 /** @type {fs} */
 var fs = require('fs');
 
-var nodetime = require('../../../public/nodetime/');
-
 /********** Classes ********/
 
 // Inicialización de la configuración del Servicio de Uploads
