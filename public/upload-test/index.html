@@ -63,7 +63,7 @@
 </head>
 <body>
     <h3>Traditional Upload</h3>
-    <form id="upload_form" name="upload_form" action="../files/?no_status_code=1" method="POST" enctype="multipart/form-data">
+    <form id="upload_form" name="upload_form" action="../files/" method="POST" enctype="multipart/form-data">
         <input id="upload_file" name="archivo" type="file"/>
         <br />
         <input name="boton_enviar" type="submit" value="Enviar" />
@@ -78,7 +78,7 @@
     <hr />
 
     <h3>Download</h3>
-    <form id="download_form" name="download_form" action="../files/?no_status_code=1" method="GET">
+    <form id="download_form" name="download_form" action="../files/" method="GET">
         <input name="archivo" type="text"/>
         <br />
         <input name="boton_enviar" type="submit" value="Enviar" />
@@ -88,7 +88,7 @@
     <hr />
 
     <h3>Delete</h3>
-    <form id="delete_form" name="delete_form" action="../files/?no_status_code=1" method="DELETE">
+    <form id="delete_form" name="delete_form" action="../files/" method="DELETE">
         <input name="archivo" type="text"/>
         <br />
         <input name="boton_enviar" type="submit" value="Enviar" />
