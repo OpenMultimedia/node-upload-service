@@ -18,31 +18,31 @@ var StatusCode = {
 var ErrorCode = {
     InvalidRequest: {
         errorId: 'invalid_request',
-        httpStatus: 400
-    }, // Bad Request
+        httpStatus: 400 // Bad Request
+    },
     FileNotExists: {
         errorId: 'file_not_exists',
-        httpStatus: 404
+        httpStatus: 404 // Not Found
     },
     ServerError: {
         errorId: 'server_error',
-        httpStatus: 500
+        httpStatus: 500 // Unexpected Server Error
     },
     SizeLimitExceeded: {
         errorId: 'size_limit_exceeded',
-        httpStatus: 413
+        httpStatus: 413 // Request Entity Too Large
     },
     FileExists: {
         errorId: 'file_exists',
-        httpStatus: 405
+        httpStatus: 405 // Method Not Allowed
     },
     FileEmpty: {
         errorId: 'file_empty',
-        httpStatus: 400
+        httpStatus: 400 // Bad Request
     },
     MethodNotAllowed: {
         errorId: 'method_not_allowed',
-        httpStatus: 405
+        httpStatus: 405 // Method Not Allowed
     }
 };
 
@@ -53,8 +53,6 @@ function FilesApiController (opt_config) {
         this.config_ = new FilesApiConfig(opt_config);
     }
 
-    this.fileIdCont_ = 0;
-
     oop.super(FilesApiController).constructor.apply(this);
 }
 
@@ -62,12 +60,19 @@ module.exports = FilesApiController;
 
 oop.inherits(FilesApiController, AbstractApiController);
 
+
+var fileIdCont_ = 0;
 FilesApiController.prototype.makeFileId = function FilesApiController_makeFileId () {
-    if ( this.fileIdCont_ >= 100 ) {
-        this.fileIdCont_ = 0;
+    if ( fileIdCont_ >= 100 ) {
+        fileIdCont_ = 0;
     }
 
     return crypto.createHash('md5').update( '#' + (new Date()).getTime() + '#' + this.fileIdCont_ ++ ).digest('hex');
+};
+
+FilesApiController.prototype.isValidFileId = function FilesApiController_isValidFileId (fileId) {
+    console.log("%s no es un FileId válido", fileId);
+    return /^[0-9a-f]{32}$/.test(fileId);
 };
 
 FilesApiController.prototype.serve = function FilesApiController_serve (path, params, request, response) {
@@ -145,6 +150,11 @@ FilesApiController.prototype.serveDelete = function FilesApiController_serveDele
 FilesApiController.prototype.serveFileDownload = function FilesApiController_serveFileDownload ( fileid, params, request, response ) {
     var self = this;
 
+    if ( ! this.isValidFileId(fileid) ) {
+        this.serveError(ErrorCode.InvalidRequest, params.no_status_code, request, response);
+        return;
+    }
+
     var downloadPath = path.join( this.config_.get('upload_location'), fileid );
 
     path.exists( downloadPath, function(exists) {
@@ -186,11 +196,22 @@ FilesApiController.prototype.serveFileDownload = function FilesApiController_ser
 };
 
 FilesApiController.prototype.serveFileInfo = function FilesApiController_serveFileInfo ( fileid, params, request, response ) {
-    this.serveJSON(503, ErrorCode.InvalidRequest, request, response);
+    if ( ! this.isValidFileId(fileid) ) {
+        this.serveError(ErrorCode.InvalidRequest, params.no_status_code, request, response);
+        return;
+    }
+
+    this.serveError(ErrorCode.InvalidRequest, params.no_status_code, request, response);
 };
 
 FilesApiController.prototype.serveFileUpload = function FilesApiController_serveFileUpload ( fileid, params, request, response ) {
     console.log("Uploading file");
+
+    if ( (fileid != '') && (! this.isValidFileId(fileid) ) ) {
+        console.log("El id del archivo a subir es inválido");
+        this.serveError(ErrorCode.InvalidRequest, params.no_status_code, request, response);
+        return;
+    }
 
     var contentType;
     if ( request.headers['content-type'] ) {
@@ -304,6 +325,12 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
 
 FilesApiController.prototype.serveFileDelete = function FilesApiController_serveFileDelete ( fileid, params, request, response ) {
     var self = this;
+
+    if ( ! this.isValidFileId(fileid) ) {
+        this.serveError(ErrorCode.InvalidRequest, params.no_status_code, request, response);
+        return;
+    }
+
     var deletePath = path.join( this.config_.get('upload_location'), fileid );
 
     path.exists( deletePath, function(exists) {
