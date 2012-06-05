@@ -91,7 +91,6 @@ if ( serverConfig.get('ssl') ) {
     server = https.createServer( sslOptions, ManageRequestWrapper );
 
 } else {
-
     server = http.createServer( ManageRequestWrapper );
 }
 
@@ -100,4 +99,15 @@ var serverAddress = serverConfig.get('address');
 
 server.listen(serverPort, serverAddress);
 
-console.log('Running Node Server on %s:%s (SSL %s) ', serverAddress, serverPort, serverConfig.get('ssl') ? 'Activado' : 'Desactivado' );
+var uid = uploadServiceConfig.get('process').get('uid');
+var gid = uploadServiceConfig.get('process').get('gid');
+
+if ( uid ) {
+    process.setuid(uid);
+}
+
+if ( gid ) {
+    process.setgid(gid);
+}
+
+console.log('Running Node Server on %s:%s (SSL %s) as %s in %s', serverAddress, serverPort, serverConfig.get('ssl') ? 'Activado' : 'Desactivado', uid ? uid : '[Default]', gid ? gid : '[Default]' );

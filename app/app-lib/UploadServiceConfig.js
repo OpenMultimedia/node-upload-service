@@ -2,6 +2,7 @@ var OMLib = global.OMLib;
 var util = require('util');
 
 var AbstractConfig = OMLib.require('AbstractConfig.js');
+var ProcessConfig = OMLib.require('process/ProcessConfig.js');
 
 var ServerConfig = OMLib.require('server/ServerConfig.js');
 var ApiManagerConfig = require('./api/ApiManagerConfig.js');
@@ -17,7 +18,8 @@ UploadServiceConfig.prototype.initializeFields = function UploadServiceConfig_in
 
     this.fields_['server'] = new ServerConfig();
     this.fields_['api'] = new ApiManagerConfig();
-    this.fields_['public_path'] = '../public';
+    this.fields_['public_dir'] = '../public';
+    this.fields_['process'] = new ProcessConfig();
 };
 
 module.exports = UploadServiceConfig;
