@@ -103,11 +103,19 @@ var uid = uploadServiceConfig.get('process').get('uid');
 var gid = uploadServiceConfig.get('process').get('gid');
 
 if ( uid ) {
-    process.setuid(uid);
+    try {
+        process.setuid(uid);
+    } catch (e) {
+        console.log("Error cambiando el UID: %s", e);
+    }
 }
 
 if ( gid ) {
-    process.setgid(gid);
+    try {
+        process.setgid(gid);
+    } catch (e) {
+        console.log("Error cambiando el GID: %s", e);
+    }
 }
 
 console.log('Running Node Server on %s:%s (SSL %s) as %s in %s', serverAddress, serverPort, serverConfig.get('ssl') ? 'Activado' : 'Desactivado', uid ? uid : '[Default]', gid ? gid : '[Default]' );
