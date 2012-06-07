@@ -71,7 +71,6 @@ FilesApiController.prototype.makeFileId = function FilesApiController_makeFileId
 };
 
 FilesApiController.prototype.isValidFileId = function FilesApiController_isValidFileId (fileId) {
-    console.log("%s no es un FileId válido", fileId);
     return /^[0-9a-f]{32}$/.test(fileId);
 };
 
@@ -151,11 +150,12 @@ FilesApiController.prototype.serveFileDownload = function FilesApiController_ser
     var self = this;
 
     if ( ! this.isValidFileId(fileid) ) {
+        console.log("%s no es un FileId válido", fileId);
         this.serveError(ErrorCode.InvalidRequest, params.no_status_code, request, response);
         return;
     }
 
-    var downloadPath = path.join( this.config_.get('upload_location'), fileid );
+    var downloadPath = path.join( this.config_.upload_dir, fileid );
 
     path.exists( downloadPath, function(exists) {
         if ( ! exists ) {
@@ -197,6 +197,7 @@ FilesApiController.prototype.serveFileDownload = function FilesApiController_ser
 
 FilesApiController.prototype.serveFileInfo = function FilesApiController_serveFileInfo ( fileid, params, request, response ) {
     if ( ! this.isValidFileId(fileid) ) {
+        console.log("%s no es un FileId válido", fileId);
         this.serveError(ErrorCode.InvalidRequest, params.no_status_code, request, response);
         return;
     }
@@ -224,15 +225,15 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
 
     var self = this;
 
-    if ( contentLength > this.config_.get('size_limit') ) {
-        console.log("Req: %d > SL: %d", contentLength, this.config_.get('size_limit'));
+    if ( contentLength > this.config_.size_limit ) {
+        console.log("Req: %d > SL: %d", contentLength, this.config_.size_limit);
         this.serveError(ErrorCode.SizeLimitExceeded, params.no_status_code, request, response);
         return;
     }
 
     var uploadedFileId = (fileid || this.makeFileId());
 
-    var uploadPath = path.join( this.config_.get('upload_location'), uploadedFileId );
+    var uploadPath = path.join( this.config_.upload_dir, uploadedFileId );
     var uploadPathTemp = uploadPath + '_temp';
 
     var overwrite = ( params && params['overwrite'] && ( params['overwrite'] == 1 ) )
@@ -327,11 +328,12 @@ FilesApiController.prototype.serveFileDelete = function FilesApiController_serve
     var self = this;
 
     if ( ! this.isValidFileId(fileid) ) {
+        console.log("%s no es un FileId válido", fileId);
         this.serveError(ErrorCode.InvalidRequest, params.no_status_code, request, response);
         return;
     }
 
-    var deletePath = path.join( this.config_.get('upload_location'), fileid );
+    var deletePath = path.join( this.config_.upload_dir, fileid );
 
     path.exists( deletePath, function(exists) {
         if ( ! exists ) {

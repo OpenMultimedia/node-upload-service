@@ -19,6 +19,6 @@ oop.inherits(ApiManagerConfig, AbstractConfig);
 ApiManagerConfig.prototype.initializeFields = function ApiManagerConfig_initializeFields () {
     oop.super(ApiManagerConfig).initializeFields.apply(this);
 
-    this.fields_['files'] = new FilesApiConfig();
-    this.fields_['auth'] = new AuthApiConfig();
+    this.defineField('files', FilesApiConfig, new FilesApiConfig());
+    this.defineField('auth', AuthApiConfig, new AuthApiConfig());
 }

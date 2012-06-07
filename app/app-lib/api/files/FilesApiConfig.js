@@ -1,5 +1,6 @@
 var OMLib = global.OMLib;
 var oop = OMLib.require('oop');
+var DataType = OMLib.require('util/DataType.js');
 
 var MongoDBConfig = OMLib.require('db/MongoDBConfig.js');
 var AbstractConfig = OMLib.require('AbstractConfig.js');
@@ -17,13 +18,8 @@ FilesApiConfig.prototype.initializeFields = function FilesApiConfig_initializeFi
 
     oop.super(FilesApiConfig).initializeFields.apply(this);
 
-    this.fields_['db'] = new MongoDBConfig();
-
-    this.fields_['upload_location']  = '../uploads';
-
-    this.fields_['size_limit']  = 100 * FilesizeUnit.Megabyte;
-
-    this.fields_['debug'] = false,
-
-    this.fields_['valid_formats'] = [ 'mp4', 'avi', 'mov' ]
+    this.defineField('db', MongoDBConfig, new MongoDBConfig());
+    this.defineField('upload_dir', DataType.String, '../uploads');
+    this.defineField('size_limit', DataType.Number, 100 * FilesizeUnit.Megabyte);
+    this.defineField('valid_formats', DataType.Array, [ 'mp4', 'avi', 'mov' ]);
 };

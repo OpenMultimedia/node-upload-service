@@ -1,4 +1,5 @@
 var OMLib = global.OMLib;
+var DataType = OMLib.require('util/DataType.js');
 var util = require('util');
 
 var AbstractConfig = OMLib.require('AbstractConfig.js');
@@ -16,10 +17,10 @@ util.inherits(UploadServiceConfig, AbstractConfig);
 UploadServiceConfig.prototype.initializeFields = function UploadServiceConfig_initializeFields() {
     UploadServiceConfig.super_.prototype.initializeFields.apply(this);
 
-    this.fields_['server'] = new ServerConfig();
-    this.fields_['api'] = new ApiManagerConfig();
-    this.fields_['public_dir'] = '../public';
-    this.fields_['process'] = new ProcessConfig();
+    this.defineField('server', ServerConfig, new ServerConfig());
+    this.defineField('api', ApiManagerConfig, new ApiManagerConfig());
+    this.defineField('public_dir', DataType.String, '../public');
+    this.defineField('process', ProcessConfig, new ProcessConfig());
 };
 
 module.exports = UploadServiceConfig;
