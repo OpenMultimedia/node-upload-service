@@ -239,7 +239,7 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
     var overwrite = ( params && params['overwrite'] && ( params['overwrite'] == 1 ) )
     //TODO. Verificar permisos de sobreescritura
 
-    var outputBuffer = fs.createWriteStream(uploadPathTemp, { flags: 'w', encoding: null, mode: ( 0x10 * 0x6 + 0x8 * 0x6 + 0x1 * 0x6 ) });
+    var outputBuffer = fs.createWriteStream(uploadPathTemp, { flags: 'w', encoding: null, mode: 0660 });
 
     function uploadEnd() {
         outputBuffer.end();
