@@ -48,8 +48,8 @@ var server;
 
 function loadConfig (file) {
     try {
-        if ( path.existsSync('app-config.json') ) {
-            var configFile = fs.readFileSync('app-config.json');
+        if ( path.existsSync(file) ) {
+            var configFile = fs.readFileSync(file);
             if ( configFile ) {
                 uploadServiceConfig.setOptions(JSON.parse(configFile));
             }
