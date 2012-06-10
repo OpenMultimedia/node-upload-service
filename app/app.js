@@ -2,6 +2,8 @@
 
 /********** Pre-initialize process ********/
 
+var cwd = process.cwd();
+
 // Cambio al directorio actual del script
 process.chdir(__dirname);
 
@@ -84,7 +86,7 @@ for ( var i = 2; i < process.argv.length; i += 1 ) {
             runProfiling();
             break;
         case '--config':
-            loadConfig(argParts[1]);
+            loadConfig( path.resolve(cwd, argParts[1]) );
             break;
     }
 }
