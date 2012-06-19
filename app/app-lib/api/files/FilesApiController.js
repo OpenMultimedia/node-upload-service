@@ -224,6 +224,7 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
     var contentLength = parseInt(request.headers['content-length'], 10);
 
     var self = this;
+    var uploadSize = 0;
 
     if ( contentLength > this.config_.size_limit ) {
         console.log("Req: %d > SL: %d", contentLength, this.config_.size_limit);
@@ -284,11 +285,18 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
                 if ( ! fileReceived ) {
                     console.log('Receiving File');
 
-                    part.on('data', function(data) {
-                        form.pause();
-                        outputBuffer.write(data, function() {
-                            form.resume();
-                        });
+                    part.on('data', function partData (data) {
+                        uploadSize += data.length;
+
+                        if ( uploadSize > contentLength ) {
+                            part.removeListener('data', partData);
+                            self.serveError(ErrorCode.SizeLimitExceeded, params.no_status_code, request, response);
+                        } else {
+                            form.pause();
+                            outputBuffer.write(data, function() {
+                                form.resume();
+                            });
+                        }
                     } );
 
                     part.on('end', uploadEnd);
@@ -311,6 +319,31 @@ FilesApiController.prototype.serveFileUpload = function FilesApiController_serve
     } else if ( (contentType == 'application/octet-stream') || (contentType == '') ) {
 
         console.log('Uploading Stream Data');
+
+        request.on('data', function requestData (data) {
+            uploadSize += data.length;
+
+            console.log('Data received: %s/%s', uploadSize, contentLength);
+
+            if ( uploadSize > contentLength ) {
+                request.removeAllListeners();
+                outputBuffer.end();
+                fs.unlink(uploadPathTemp,  function() { console.log('Temp file deleted'); });
+                self.serveError(ErrorCode.SizeLimitExceeded, params.no_status_code, request, response);
+            }
+        });
+
+        outputBuffer.on('error', function(e) {
+            console.log('Error output: %s', e);
+        });
+
+        request.on('error', function(e) {
+            console.log('Error request: %s', e);
+        });
+
+        outputBuffer.on('pipe', function (src) {
+            console.log('Piping...');
+        });
 
         request.pipe(outputBuffer);
 
